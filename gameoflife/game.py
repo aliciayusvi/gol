@@ -43,6 +43,8 @@ width = 802
 height = 802
 nx = 20 # columns
 ny = 20 # rows
+cell_width = (width - 2) / nx
+cell_height = (height - 2) / ny
 background_color = (0, 0, 255)  # blue in RGB
 
 board = [[0 for _ in range(nx)] for _ in range(ny)]
@@ -66,10 +68,18 @@ while keep_playing:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 keep_playing = False
-
+        mouse_click = pygame.mouse.get_pressed()
+        if sum(mouse_click) > 0:
+            x, y = pygame.mouse.get_pos()
+            i = int((y - 1) // cell_height)
+            j = int((x - 1) // cell_width)
+            board[i][j] = 1 - board[i][j]
     # update gamestate
     
     # render
+    screen.fill(background_color)
+    draw_grid(screen, nx, ny)
+    draw_cells(screen, board)
     pygame.display.update()
     # wait
     time.sleep(0.1)
