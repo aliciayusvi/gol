@@ -32,11 +32,9 @@ def draw_cells(screen, board: List[List[int]]):
     for i in range(rows):
         for j in range(cols):
             if board[i][j] == 1:
-                x1 = j * cell_width + 1
-                y1 = i * cell_height + 1
-                x2 = (j + 1) * cell_width + 1
-                y2 = (i + 1) * cell_height + 1
-                pygame.draw.rect(screen, cell_color, (x1, y1, x2, y2))
+                x = j * cell_width + 1
+                y = i * cell_height + 1
+                pygame.draw.rect(screen, cell_color, (x, y, cell_width, cell_height))
 
 
 pygame.init()
@@ -48,7 +46,6 @@ ny = 20 # rows
 background_color = (0, 0, 255)  # blue in RGB
 
 board = [[0 for _ in range(nx)] for _ in range(ny)]
-board[1][3] = 1
 
 screen = pygame.display.set_mode((width, height))
 screen.fill(background_color)
