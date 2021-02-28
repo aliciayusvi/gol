@@ -1,3 +1,4 @@
+#TWepilepsy
 import pygame
 import time
 from typing import List
@@ -36,6 +37,24 @@ def draw_cells(screen, board: List[List[int]]):
                 y = i * cell_height + 1
                 pygame.draw.rect(screen, cell_color, (x, y, cell_width, cell_height))
 
+def update(current_board):
+    next_board = [[0 for _ in range(nx)] for _ in range(ny)]
+    for i in range(ny):
+        for j in range(nx):
+            neighbors = [
+                current_board[(i + k) % ny][(j + l) % nx]
+                for k in range(-1, 2)
+                for l in range(-1, 2)
+            ]
+            current_state = board[i][j]
+            alive_neighbors = sum(neighbors) - current_state
+            if current_state == 1 and alive_neighbors in [0, 1, 4]:
+                next_board[i][j] = 0
+            elif current_state == 0 and alive_neighbors == 3:
+                next_board[i][j] = 1
+            else:
+                next_board[i][j] = current_state
+    return next_board
 
 pygame.init()
 
@@ -54,7 +73,6 @@ screen.fill(background_color)
 draw_grid(screen, nx, ny)
 draw_cells(screen, board)
 pygame.display.update()
-
 
 # Game loop
 
@@ -75,7 +93,7 @@ while keep_playing:
             j = int((x - 1) // cell_width)
             board[i][j] = 1 - board[i][j]
     # update gamestate
-    
+    board = update(board)
     # render
     screen.fill(background_color)
     draw_grid(screen, nx, ny)
