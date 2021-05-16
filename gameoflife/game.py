@@ -1,19 +1,49 @@
 #TWepilepsy
+import typing_extensions
 import pygame
 import time
 from typing import List
 
+class Entity:
 
-class Board:
+    def update(self):
+        pass
+    
+    def draw(self, screen):
+        pass
 
-    def __init__(self, rows: int = 20, cols: int = 20):
+    def do_events(self, events):
+        pass
+
+
+class Board(Entity):
+
+    def __init__(self, rows: int = 20, cols: int = 20, width: int = 802, height: int = 802):
         # board properties
         self.nx = cols # columns
         self.ny = rows # rows
         self.active_color = (255, 255, 255)
         self.inactive_color = (160, 160, 160)
         self.background_color = (0, 0, 255)  # blue in RGB
-        self.foreground_color = self.active_color
+        self.width = width
+        self.height = height
+        self.board_state = self.new_board()
+        self.is_active = False
+    
+
+    def get_foreground_color(self):
+        return self.active_color if self.is_active else self.inactive_color
+
+    def get_cell_width(self):
+        return (self.height - 2) // self.nx
+
+    def get_cell_height(self):
+        return (self.width - 2) // self.ny
+
+    def set_active(self, active: bool):
+        self.is_active = active
+
+    def reset(self):
         self.board_state = self.new_board()
 
     def new_board(self) -> List[List[int]]:
@@ -25,7 +55,7 @@ class Board:
         self.draw_cells(screen)
 
     def draw_grid(self, screen):
-        line_color = self.foreground_color
+        line_color = self.get_foreground_color()
         width = screen.get_width()
         height = screen.get_height()
         # draw border
@@ -34,27 +64,23 @@ class Board:
         pygame.draw.rect(screen, line_color, (x1, y1, x2, y2), width=1)
         
         # draw horizontal lines
-        cell_height = (width - 2) / self.ny
         for i in range(self.ny - 1):
-            y = cell_height * (i + 1)
+            y = self.get_cell_height() * (i + 1)
             pygame.draw.line(screen, line_color, (0, y), (width - 1, y))
 
         # draw vertical lines
-        cell_width = (height - 2) / self.nx
         for j in range(self.nx - 1):
-            x = cell_width * (j + 1)
+            x = self.get_cell_width() * (j + 1)
             pygame.draw.line(screen, line_color, (x, 0), (x, height - 1))
 
     def draw_cells(self, screen):
-        cell_color = self.foreground_color
-        cell_width = (screen.get_width()-2) // self.nx
-        cell_height = (screen.get_height()-2) // self.ny
+        cell_color = self.get_foreground_color()
         for i in range(self.ny):
             for j in range(self.nx):
                 if self.board_state[i][j] == 1:
-                    x = j * cell_width + 1
-                    y = i * cell_height + 1
-                    pygame.draw.rect(screen, cell_color, (x, y, cell_width, cell_height))
+                    x = j * self.get_cell_width() + 1
+                    y = i * self.get_cell_height() + 1
+                    pygame.draw.rect(screen, cell_color, (x, y, self.get_cell_width(), self.get_cell_height()))
 
     def update(self):
         next_board_state = self.new_board()
@@ -75,61 +101,98 @@ class Board:
                     next_board_state[i][j] = current_state
         self.board_state = next_board_state
 
-pygame.init()
+    def click(self, i, j):
+        self.board_state[i][j] = 1 - self.board_state[i][j]
 
-
-# screen properties
-width = 802
-height = 802
-
-# game state properties
-rows = 10
-cols = 10
-board = Board(rows, cols)
-
-# board properties, derived from screen properties and other board properties
-cell_width = (width - 2) / board.nx
-cell_height = (height - 2) / board.ny
-
-# game initialization
-screen = pygame.display.set_mode((width, height))
-board.draw(screen)
-pygame.display.update()
-
-# Game loop
-
-keep_playing = True
-is_paused = True
-foreground_color = board.inactive_color
-while keep_playing:
-    # process events
-    events = pygame.event.get()
-    for event in events:
-        if event.type == pygame.QUIT:
-            keep_playing = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                keep_playing = False
-            if event.key == pygame.K_SPACE:
-                is_paused = not is_paused
-                foreground_color = board.inactive_color if is_paused else board.active_color
-            if event.key == pygame.K_r:
-                board = Board(rows, cols)
+    def do_events(self, events):
         mouse_click = pygame.mouse.get_pressed()
         if sum(mouse_click) > 0:
             x, y = pygame.mouse.get_pos()
-            if (x < 1 or x > width - 1) or (y < 1 or y > height - 1):
-                continue
-            i = int((y - 1) // cell_height)
-            j = int((x - 1) // cell_width)
-            board.board_state[i][j] = 1 - board.board_state[i][j]
+            if (x < 1 or x > self.width - 1) or (y < 1 or y > self.height - 1):
+                return
+            i = int((y - 1) // self.get_cell_height())
+            j = int((x - 1) // self.get_cell_width())
+            self.click(i, j)
 
-    # update gamestate
-    if not is_paused:
-        board.update()
-    # render
-    screen.fill((0, 0, 0))
-    board.draw(screen)
-    pygame.display.update()
-    # wait  
-    time.sleep(0.1)
+class Game:
+    
+    def __init__(self, width: int, height: int) -> None:
+        self.keep_playing = True
+        self.is_paused = True
+        self.entities: List[Entity] = []
+        self.width = width
+        self.height = height
+        self.screen = None
+
+    def draw(self, screen):
+        screen.fill((0, 0, 0))
+        for entity in self.entities:
+            entity.draw(screen)
+        pygame.display.update()
+
+    def do_events(self, events):
+        self.do_game_events(events)
+        for entity in self.entities:
+            entity.do_events(events)
+
+    def do_game_events(self, events):
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.keep_playing = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    self.is_paused = not self.is_paused
+
+
+    def update(self):
+        for entity in self.entities:
+            entity.update()
+
+    def game_loop(self) -> None:
+        while self.keep_playing:
+            # process events
+            events = pygame.event.get()
+            self.do_events(events)
+
+            # update gamestate
+            if not self.is_paused:
+                self.update()
+            # render
+            self.draw(self.screen)
+            
+            # board.draw(screen)
+            pygame.display.update()
+
+            # wait  
+            time.sleep(0.1)
+
+    def run(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        self.game_loop()
+
+
+class GameOfLife(Game):
+
+    def __init__(self) -> None:
+        super().__init__(802, 802)
+        self.rows = 10
+        self.cols = 10
+        self.board = Board(self.rows, self.cols, self.width, self.height)
+        self.entities.append(self.board)
+
+    def do_game_events(self, events):
+        super().do_game_events(events)
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    self.board.set_active(not self.is_paused)
+                if event.key == pygame.K_r:
+                    self.board.reset()
+                if event.key == pygame.K_ESCAPE:
+                    self.keep_playing = False
+
+
+game = GameOfLife()
+
+game.run()
