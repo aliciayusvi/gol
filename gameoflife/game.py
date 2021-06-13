@@ -1,19 +1,8 @@
 #TWepilepsy
-import typing_extensions
 import pygame
-import time
+
 from typing import List
-
-class Entity:
-
-    def update(self):
-        pass
-    
-    def draw(self, screen):
-        pass
-
-    def do_events(self, events):
-        pass
+from engine.game import Entity, Game
 
 
 class Board(Entity):
@@ -29,7 +18,6 @@ class Board(Entity):
         self.height = height
         self.board_state = self.new_board()
         self.is_active = False
-    
 
     def get_foreground_color(self):
         return self.active_color if self.is_active else self.inactive_color
@@ -102,6 +90,9 @@ class Board(Entity):
         self.board_state = next_board_state
 
     def click(self, i, j):
+        if i < 0 or j < 0 or i >= self.ny or j >= self.nx:
+            print(f"warning: click coordinates on board out of range: ({i}, {j})")
+            return
         self.board_state[i][j] = 1 - self.board_state[i][j]
 
     def do_events(self, events):
@@ -113,63 +104,6 @@ class Board(Entity):
             i = int((y - 1) // self.get_cell_height())
             j = int((x - 1) // self.get_cell_width())
             self.click(i, j)
-
-class Game:
-    
-    def __init__(self, width: int, height: int) -> None:
-        self.keep_playing = True
-        self.is_paused = True
-        self.entities: List[Entity] = []
-        self.width = width
-        self.height = height
-        self.screen = None
-
-    def draw(self, screen):
-        screen.fill((0, 0, 0))
-        for entity in self.entities:
-            entity.draw(screen)
-        pygame.display.update()
-
-    def do_events(self, events):
-        self.do_game_events(events)
-        for entity in self.entities:
-            entity.do_events(events)
-
-    def do_game_events(self, events):
-        for event in events:
-            if event.type == pygame.QUIT:
-                self.keep_playing = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    self.is_paused = not self.is_paused
-
-
-    def update(self):
-        for entity in self.entities:
-            entity.update()
-
-    def game_loop(self) -> None:
-        while self.keep_playing:
-            # process events
-            events = pygame.event.get()
-            self.do_events(events)
-
-            # update gamestate
-            if not self.is_paused:
-                self.update()
-            # render
-            self.draw(self.screen)
-            
-            # board.draw(screen)
-            pygame.display.update()
-
-            # wait  
-            time.sleep(0.1)
-
-    def run(self):
-        pygame.init()
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        self.game_loop()
 
 
 class GameOfLife(Game):
